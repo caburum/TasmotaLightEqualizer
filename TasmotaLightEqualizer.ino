@@ -19,31 +19,56 @@ void setup() {
 	delay(1000); // wait for serial monitor
 }
 
+int targetValue = 800;
+int lightValue = 0;
+int lastLightValue = 0;
+
 void loop() {
-	Serial.println("running");
+	// Serial.println("running");
 
 	connectWifi(); // reconnect after sleep
-	sendCmnd("power2+toggle");
 
-	Serial.println("going to sleep");
-	Power::lightSleep(SLEEP_TIMEOUT);
+	// todo: what is current draw of photoresistor?
+	lightValue = analogRead(PIN_PHOTORESISTOR); // 0-1023
+	Serial.println(lightValue);
+
+	int diff = targetValue - lightValue;
+	if (diff > 50) {
+		// increase brightness
+		sendCmnd("dimmer2+%2B10");
+	} else if (diff < -50) {
+		// if (abs(lightValue - lastLightValue) < 50) {
+		// 	// no change, just turn off
+		// 	sendCmnd("power2+off");
+		// } else {
+		// decrease brightness
+		sendCmnd("dimmer2+-10");
+		// }
+	}
+
+	lastLightValue = lightValue;
+
+	// Serial.println("going to sleep");
+	// Power::lightSleep(SLEEP_TIMEOUT);
 	// even if we wake up from sleep due to interrupt, code will still be delayed
 	// todo: also physically wire power on/off switch to esp power
 }
 
 void connectWifi() {
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(WIFI_SSID, WIFI_PASSPHRASE);
-	Serial.print("wifi connecting");
-	while (WiFi.status() != WL_CONNECTED) {
-		delay(500);
-		Serial.print(".");
+	if (WiFi.status() != WL_CONNECTED) {
+		WiFi.mode(WIFI_STA);
+		WiFi.begin(WIFI_SSID, WIFI_PASSPHRASE);
+		Serial.print("wifi connecting");
+		while (WiFi.status() != WL_CONNECTED) {
+			delay(500);
+			Serial.print(".");
+		}
+		Serial.println();
+		Serial.print("connected to \"");
+		Serial.print(WIFI_SSID);
+		Serial.print("\" with ip ");
+		Serial.println(WiFi.localIP());
 	}
-	Serial.println();
-	Serial.print("connected to \"");
-	Serial.print(WIFI_SSID);
-	Serial.print("\" with ip ");
-	Serial.println(WiFi.localIP());
 }
 
 void sendCmnd(const char* cmnd) {
