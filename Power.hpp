@@ -4,15 +4,18 @@
 #include <ESP8266WiFi.h>
 #include <user_interface.h>
 
-#include "config.h"
+#include "UserInput.hpp"
 
 extern os_timer_t* timer_list;
 
 // https://kevinstadler.github.io/notes/esp8266-deep-sleep-light-sleep-arduino/
 // https://forum.arduino.cc/t/963225
 // https://github.com/alenaksu/AirQualityMonitor/blob/main/src/PowerManager.cpp
+// https://github.com/esp8266/Arduino/issues/7055#issuecomment-811918663
+// https://github.com/esp8266/Arduino/issues/8913#issuecomment-1519027224
 namespace Power {
 	os_timer_t* lastTimerList;
+	volatile bool sleeping = false;
 
 	void fpm_wakup_cb_func(void) {
 		Serial.println("woke up from light sleep");
@@ -20,6 +23,8 @@ namespace Power {
 
 		timer_list = lastTimerList;
 		lastTimerList = nullptr;
+
+		sleeping = false;
 
 		wifi_fpm_close(); // disable force sleep
 
@@ -37,6 +42,9 @@ namespace Power {
 		lastTimerList = timer_list;
 		timer_list = nullptr;
 
+		sleeping = true;
+
+		wifi_station_disconnect();
 		wifi_set_opmode(NULL_MODE);
 		wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
 		wifi_fpm_set_wakeup_cb(fpm_wakup_cb_func);
@@ -51,9 +59,7 @@ namespace Power {
 		// light sleep function requires microseconds
 		wifi_fpm_do_sleep(sleepTime_ms * 1000);
 
-		// timed light sleep is only entered when the sleep command is
-		// followed by a delay() that is at least 1ms longer than the sleep
-		delay(sleepTime_ms + 1);
+		esp_delay(sleepTime_ms + 1, []() { return sleeping; });
 	}
 
 	// light sleep forever until hardware interrupt
