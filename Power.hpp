@@ -13,6 +13,7 @@ extern os_timer_t* timer_list;
 // https://github.com/alenaksu/AirQualityMonitor/blob/main/src/PowerManager.cpp
 // https://github.com/esp8266/Arduino/issues/7055#issuecomment-811918663
 // https://github.com/esp8266/Arduino/issues/8913#issuecomment-1519027224
+// https://github.com/esp8266/Arduino/pull/7979
 namespace Power {
 	os_timer_t* lastTimerList;
 	volatile bool sleeping = false;
@@ -25,6 +26,8 @@ namespace Power {
 		lastTimerList = nullptr;
 
 		sleeping = false;
+
+		esp_schedule();
 
 		wifi_fpm_close(); // disable force sleep
 

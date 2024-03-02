@@ -23,7 +23,7 @@ inline int readLightValue() {
 	return sum / PHOTORESISTOR_READS;
 }
 
-#define PHOTORESISTOR_ACCEPTABLE_ERROR 15
+#define PHOTORESISTOR_ACCEPTABLE_ERROR 10
 #define TASMOTA_STEP "2" // todo: implement bigger step with larger error
 void loop() {
 	Serial.println("running");
@@ -32,7 +32,7 @@ void loop() {
 	// handle toggle button
 	UserInput::loop();
 
-	// todo: what is current draw of photoresistor?
+	// todo: what is current draw of photoresistor? might want to have a pin for turning it on
 
 	if (Network::isLightOn()) {
 		int lastLightValue = -1; // initialize to impossible value as no previous reading
@@ -41,33 +41,40 @@ void loop() {
 		for (int i = 0; i < 55; i++) {
 			lightValue = readLightValue();
 			Serial.print("light value: ");
-			Serial.println(lightValue);
+			Serial.print(lightValue);
 
 			int error = StorageData::targetLightValue - lightValue;
+
+			int step = constrain(.13 * abs(error), 1, 50); // for every 1 light value, dimmer increases by approx .147; underestimate to be safe
+
+			Serial.print(" step: ");
+			Serial.println(step);
+
 			if (lastLightValue >= 0 && StorageData::targetLightValue == Storage::lastTargetLightValue && abs(lastLightValue - lightValue) < 6) {
 				Storage::loop(); // push last target value to rtc if changed
 				Serial.println("no change");
+				// will generally end up looping here if user interacted recently, so don't go to sleep (for faster alterations)
 			} else if (error > PHOTORESISTOR_ACCEPTABLE_ERROR) {
 				// increase brightness
-				Network::sendCmnd("dimmer2+%2B" TASMOTA_STEP);
+				Network::sendCmnd(("dimmer2+%2B" + String(step)).c_str());
 			} else if (error < -PHOTORESISTOR_ACCEPTABLE_ERROR) {
 				// decrease brightness
-				Network::sendCmnd("dimmer2+-" TASMOTA_STEP);
+				Network::sendCmnd(("dimmer2+-" + String(step)).c_str());
 				// todo: can't turn off at brightness 1 since 0 becomes off & locks us out (for now)
 			} else { // at target
 				Serial.println("at target");
-				break;
+				// break;
 			}
 
 			lastLightValue = lightValue;
 
-			delay(200);
+			// crashes... why?
+			// unsigned long startMillis = millis();
+			// while (millis() - startMillis < 500) yield();
 		}
 	} else {
 		Serial.println("light is off");
 	}
-
-	// todo: if user interacted recently, don't go to sleep (for faster alterarions)
 
 	Storage::loop();
 

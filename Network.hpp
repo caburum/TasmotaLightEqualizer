@@ -17,9 +17,14 @@ namespace Network {
 			WiFi.mode(WIFI_STA);
 			WiFi.begin(WIFI_SSID, WIFI_PASSPHRASE);
 			Serial.print("wifi connecting");
+			int connectionAttempts = 0;
 			while (WiFi.status() != WL_CONNECTED) {
 				delay(500);
 				Serial.print(".");
+				if (connectionAttempts++ > 50) {
+					Serial.println("wifi connection failed");
+					ESP.restart();
+				}
 			}
 			Serial.println();
 			Serial.print("connected to \"");
@@ -35,7 +40,7 @@ namespace Network {
 		if (WiFi.status() == WL_CONNECTED) {
 			String serverPath = URL_CMND + cmnd;
 
-			HTTPClient http; // ?attempting to reuse causes a crash
+			HTTPClient http;
 			http.begin(client, serverPath.c_str());
 
 			int httpResponseCode = http.GET();

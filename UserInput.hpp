@@ -11,7 +11,7 @@
 
 #define ENCODER_TARGET_STEP_SLOW 10
 #define ENCODER_TARGET_STEP_MED 20
-#define ENCODER_TARGET_STEP_FAST 80
+#define ENCODER_TARGET_STEP_FAST 40
 
 namespace UserInput {
 	volatile bool toggleScheduledFlag = false;
@@ -77,7 +77,7 @@ namespace UserInput {
 			return; // skip dealing with value
 		}
 
-		targetLightValue = constrain(targetLightValue, 0, 1023);
+		targetLightValue = constrain(targetLightValue, 0, 1023); // todo: fix overflow
 
 		Serial.print("targetLightValue: ");
 		Serial.println(targetLightValue);
