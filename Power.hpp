@@ -44,6 +44,8 @@ namespace Power {
 
 		sleeping = true;
 
+		// Network::client.stop();
+
 		wifi_station_disconnect();
 		wifi_set_opmode(NULL_MODE);
 		wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);

@@ -2,18 +2,18 @@
 #define USERINPUT_HPP
 
 #include "Network.hpp"
+#include "Storage.hpp"
 #include "config.h"
 
 #define PIN_SW D4
 #define PIN_CLK D5
 #define PIN_DT D6
 
-#define ENCODER_TARGET_STEP 10
-#define PHOTORESISTOR_ACCEPTABLE_ERROR 20
+#define ENCODER_TARGET_STEP_SLOW 10
+#define ENCODER_TARGET_STEP_MED 20
+#define ENCODER_TARGET_STEP_FAST 80
 
 namespace UserInput {
-	// outputs for the rest of the program
-	volatile int targetLightValue = 800; // todo: persist to flash, have delay when stopped updating?
 	volatile bool toggleScheduledFlag = false;
 
 	IRAM_ATTR void toggleButtonInterrupt() {
@@ -37,9 +37,13 @@ namespace UserInput {
 
 	// https://garrysblog.com/2021/03/20/reliably-debouncing-rotary-encoders-with-arduino-and-esp32/
 	IRAM_ATTR void updateEncoderInterrupt() {
+		using namespace StorageData;
+
 		static uint8_t oldAB = 3; // lookup table index
 		static int8_t encval = 0; // encoder value
 		static const int8_t encStates[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0}; // lookup table
+		static unsigned long lastTime = 0;
+		unsigned long currentTime = millis();
 
 		oldAB <<= 2; // Remember previous state
 
@@ -50,11 +54,25 @@ namespace UserInput {
 
 		// update counter if encoder has rotated a full indent, that is at least 4 steps
 		if (encval > 3) { // four steps forward
-			targetLightValue += ENCODER_TARGET_STEP;
+			if (currentTime - lastTime > 40) {
+				targetLightValue += ENCODER_TARGET_STEP_SLOW;
+			} else if (currentTime - lastTime > 20) {
+				targetLightValue += ENCODER_TARGET_STEP_MED;
+			} else {
+				targetLightValue += ENCODER_TARGET_STEP_FAST;
+			}
 			encval = 0;
+			lastTime = currentTime;
 		} else if (encval < -3) { // four steps backwards
-			targetLightValue -= ENCODER_TARGET_STEP;
+			if (currentTime - lastTime > 40) {
+				targetLightValue -= ENCODER_TARGET_STEP_SLOW;
+			} else if (currentTime - lastTime > 20) {
+				targetLightValue -= ENCODER_TARGET_STEP_MED;
+			} else {
+				targetLightValue -= ENCODER_TARGET_STEP_FAST;
+			}
 			encval = 0;
+			lastTime = currentTime;
 		} else {
 			return; // skip dealing with value
 		}
