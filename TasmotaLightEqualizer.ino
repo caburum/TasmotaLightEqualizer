@@ -5,11 +5,11 @@
 #define PIN_PHOTORESISTOR A0
 
 void setup() {
-	Storage::setup();
-	UserInput::setup();
-
 	Serial.begin(115200);
 	delay(1000); // wait for serial monitor
+
+	Storage::setup();
+	UserInput::setup();
 }
 
 int lightValue = 0;
@@ -27,10 +27,10 @@ inline int readLightValue() {
 #define TASMOTA_STEP "2" // todo: implement bigger step with larger error
 void loop() {
 	Serial.println("running");
-	// todo: show "thinking" led to let user know system is alive (given long wifi connection time)
+	// todo: show "thinking" led (blue?) to let user know system is alive (given long wifi connection time)
 
 	// handle toggle button
-	UserInput::loop();
+	UserInput::loop(); // todo: flash red/green on press to indicate new state (on/off)
 
 	// todo: what is current draw of photoresistor? might want to have a pin for turning it on
 
@@ -45,7 +45,7 @@ void loop() {
 
 			int error = StorageData::targetLightValue - lightValue;
 
-			int step = constrain(.13 * abs(error), 1, 50); // for every 1 light value, dimmer increases by approx .147; underestimate to be safe
+			int step = constrain(.13 * abs(error), 1, 30); // for every 1 light value, dimmer increases by approx .147; underestimate to be safe & prevent major oscillations
 
 			Serial.print(" step: ");
 			Serial.println(step);
@@ -60,7 +60,7 @@ void loop() {
 			} else if (error < -PHOTORESISTOR_ACCEPTABLE_ERROR) {
 				// decrease brightness
 				Network::sendCmnd(("dimmer2+-" + String(step)).c_str());
-				// todo: can't turn off at brightness 1 since 0 becomes off & locks us out (for now)
+				// todo: can't turn off at brightness 1 since 0 becomes off & locks us out (for now), track set state & autodisable if tasmota power changed to off while we think we *should* be on
 			} else { // at target
 				Serial.println("at target");
 				// break;
