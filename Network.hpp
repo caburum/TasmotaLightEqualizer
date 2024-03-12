@@ -8,6 +8,12 @@
 
 #include "secrets.h"
 
+typedef enum {
+	NETWORK_OFF = 0,
+	NETWORK_ON = 1,
+	NETWORK_ERROR = 2
+} networkBooleanResult_t;
+
 namespace Network {
 	WiFiClient client;
 
@@ -62,17 +68,17 @@ namespace Network {
 		return response;
 	}
 
-	bool isLightOn() {
+	networkBooleanResult_t isLightOn() {
 		String response = sendCmnd("POWER2");
 		JSONVar json = JSON.parse(response);
 		if (JSON.typeof(json) == "undefined") {
 			Serial.println("json parse failed");
-			return false;
+			return NETWORK_ERROR;
 		}
 		if (json.hasOwnProperty("POWER2")) {
-			return json.hasPropertyEqual("POWER2", "ON");
+			return json.hasPropertyEqual("POWER2", "ON") ? NETWORK_ON : NETWORK_OFF;
 		}
-		return false;
+		return NETWORK_ERROR;
 	}
 }
 

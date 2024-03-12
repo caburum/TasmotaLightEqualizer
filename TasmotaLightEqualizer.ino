@@ -1,5 +1,6 @@
 #include "Network.hpp"
 #include "Power.hpp"
+#include "StatusLight.hpp"
 #include "UserInput.hpp"
 
 #define PIN_PHOTORESISTOR A0
@@ -10,6 +11,7 @@ void setup() {
 
 	Storage::setup();
 	UserInput::setup();
+	StatusLight::setup();
 }
 
 int lightValue = 0;
@@ -24,17 +26,18 @@ inline int readLightValue() {
 }
 
 #define PHOTORESISTOR_ACCEPTABLE_ERROR 10
-#define TASMOTA_STEP "2" // todo: implement bigger step with larger error
 void loop() {
+	StatusLight::setColor(false, false, true); // blue
+
 	Serial.println("running");
-	// todo: show "thinking" led (blue?) to let user know system is alive (given long wifi connection time)
 
 	// handle toggle button
 	UserInput::loop(); // todo: flash red/green on press to indicate new state (on/off)
 
 	// todo: what is current draw of photoresistor? might want to have a pin for turning it on
 
-	if (Network::isLightOn()) {
+	networkBooleanResult_t networkStatus = Network::isLightOn();
+	if (networkStatus == NETWORK_ON) {
 		int lastLightValue = -1; // initialize to impossible value as no previous reading
 
 		// try not to get stuck forever
@@ -53,6 +56,7 @@ void loop() {
 			if (lastLightValue >= 0 && StorageData::targetLightValue == Storage::lastTargetLightValue && abs(lastLightValue - lightValue) < 6) {
 				Storage::loop(); // push last target value to rtc if changed
 				Serial.println("no change");
+				StatusLight::setColor(true, true, false); // yellow
 				// will generally end up looping here if user interacted recently, so don't go to sleep (for faster alterations)
 			} else if (error > PHOTORESISTOR_ACCEPTABLE_ERROR) {
 				// increase brightness
@@ -63,20 +67,26 @@ void loop() {
 				// todo: can't turn off at brightness 1 since 0 becomes off & locks us out (for now), track set state & autodisable if tasmota power changed to off while we think we *should* be on
 			} else { // at target
 				Serial.println("at target");
+				StatusLight::setColor(false, true, false); // green
 				// break;
 			}
 
 			lastLightValue = lightValue;
-
-			// crashes... why?
-			// unsigned long startMillis = millis();
-			// while (millis() - startMillis < 500) yield();
 		}
-	} else {
+	} else if (networkStatus == NETWORK_OFF) {
 		Serial.println("light is off");
+	} else {
+		Serial.println("network error");
+		StatusLight::setColor(true, false, false); // red
 	}
 
 	Storage::loop();
+
+	// todo: test for crash?
+	unsigned long startMillis = millis();
+	while (millis() - startMillis < 500) optimistic_yield(10e3);
+
+	StatusLight::setColor(false, false, false); // off
 
 	Serial.println("going to sleep");
 	Power::lightSleep(60e3);
