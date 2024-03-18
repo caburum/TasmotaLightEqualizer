@@ -27,8 +27,6 @@ inline int readLightValue() {
 
 #define PHOTORESISTOR_ACCEPTABLE_ERROR 10
 void loop() {
-	StatusLight::setColor(false, false, true); // blue
-
 	Serial.println("running");
 
 	// handle toggle button
@@ -38,10 +36,14 @@ void loop() {
 
 	networkBooleanResult_t networkStatus = Network::isLightOn();
 	if (networkStatus == NETWORK_ON) {
+		StatusLight::setColor(false, false, true); // blue
+
 		int lastLightValue = -1; // initialize to impossible value as no previous reading
 
 		// try not to get stuck forever
 		for (int i = 0; i < 55; i++) {
+			ESP.wdtFeed();
+
 			lightValue = readLightValue();
 			Serial.print("light value: ");
 			Serial.print(lightValue);
@@ -84,7 +86,10 @@ void loop() {
 
 	// todo: test for crash?
 	unsigned long startMillis = millis();
-	while (millis() - startMillis < 500) optimistic_yield(10e3);
+	while (millis() - startMillis < 100) {
+		ESP.wdtFeed();
+		optimistic_yield(10e3);
+	}
 
 	StatusLight::setColor(false, false, false); // off
 

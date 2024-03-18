@@ -6,8 +6,8 @@
 #include "config.h"
 
 #define PIN_SW D4
-#define PIN_CLK D5
-#define PIN_DT D6
+#define PIN_CLK D6
+#define PIN_DT D5
 
 #define ENCODER_TARGET_STEP_SLOW 10
 #define ENCODER_TARGET_STEP_MED 20

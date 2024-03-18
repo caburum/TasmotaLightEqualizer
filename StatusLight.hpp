@@ -3,7 +3,7 @@
 
 #define PIN_LED_R D1
 #define PIN_LED_G D2
-#define PIN_LED_B D7
+#define PIN_LED_B D8
 
 namespace StatusLight {
 	inline void setup() {
