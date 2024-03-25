@@ -30,16 +30,17 @@ void loop() {
 	Serial.println("running");
 
 	// handle toggle button
-	UserInput::loop(); // todo: flash red/green on press to indicate new state (on/off)
+	UserInput::loop();
 
 	// todo: what is current draw of photoresistor? might want to have a pin for turning it on
 
-	networkBooleanResult_t networkStatus = Network::isLightOn();
+	networkBooleanResult_t networkStatus = Network::power2();
 	if (networkStatus == NETWORK_ON) {
 		StatusLight::setColor(false, false, true); // blue
 
 		int lastLightValue = -1; // initialize to impossible value as no previous reading
 
+		bool reachedTargetOnce = false;
 		// try not to get stuck forever
 		for (int i = 0; i < 55; i++) {
 			ESP.wdtFeed();
@@ -61,13 +62,16 @@ void loop() {
 				StatusLight::setColor(true, true, false); // yellow
 				// will generally end up looping here if user interacted recently, so don't go to sleep (for faster alterations)
 			} else if (error > PHOTORESISTOR_ACCEPTABLE_ERROR) {
+				if (reachedTargetOnce) StatusLight::setColor(false, false, false); // off
 				// increase brightness
 				Network::sendCmnd(("dimmer2+%2B" + String(step)).c_str());
 			} else if (error < -PHOTORESISTOR_ACCEPTABLE_ERROR) {
+				if (reachedTargetOnce) StatusLight::setColor(false, false, false); // off
 				// decrease brightness
 				Network::sendCmnd(("dimmer2+-" + String(step)).c_str());
 				// todo: can't turn off at brightness 1 since 0 becomes off & locks us out (for now), track set state & autodisable if tasmota power changed to off while we think we *should* be on
 			} else { // at target
+				reachedTargetOnce = true;
 				Serial.println("at target");
 				StatusLight::setColor(false, true, false); // green
 				// break;
@@ -95,5 +99,4 @@ void loop() {
 
 	Serial.println("going to sleep");
 	Power::lightSleep(60e3);
-	// todo: also physically wire power on/off switch to esp power
 }

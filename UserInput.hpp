@@ -2,6 +2,7 @@
 #define USERINPUT_HPP
 
 #include "Network.hpp"
+#include "StatusLight.hpp"
 #include "Storage.hpp"
 #include "config.h"
 
@@ -24,6 +25,7 @@ namespace UserInput {
 		if (currentTime - lastTime > 200) {
 			toggleScheduledFlag = true; // will be unset by main loop
 			Serial.println("toggleScheduledFlag: true");
+			StatusLight::setColor(true, true, false); // yellow
 		}
 		lastTime = currentTime;
 	}
@@ -31,7 +33,14 @@ namespace UserInput {
 	inline void loop() {
 		if (toggleScheduledFlag) {
 			toggleScheduledFlag = false;
-			Network::sendCmnd("power2+toggle");
+			networkBooleanResult_t toggleStatus = Network::power2(true);
+			if (toggleStatus == NETWORK_ON) {
+				StatusLight::setColor(false, true, true); // cyan
+			} else if (toggleStatus == NETWORK_OFF) {
+				StatusLight::setColor(true, false, true); // magenta
+			} else {
+				StatusLight::setColor(true, false, false); // red
+			}
 		}
 	}
 
@@ -76,6 +85,8 @@ namespace UserInput {
 		} else {
 			return; // skip dealing with value
 		}
+
+		StatusLight::setColor(true, true, false); // yellow
 
 		targetLightValue = constrain(targetLightValue, 0, 1023); // todo: fix overflow
 

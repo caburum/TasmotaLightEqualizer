@@ -68,8 +68,8 @@ namespace Network {
 		return response;
 	}
 
-	networkBooleanResult_t isLightOn() {
-		String response = sendCmnd("POWER2");
+	networkBooleanResult_t power2(boolean toggle = false) {
+		String response = sendCmnd(toggle ? "power2+toggle" : "POWER2");
 		JSONVar json = JSON.parse(response);
 		if (JSON.typeof(json) == "undefined") {
 			Serial.println("json parse failed");
