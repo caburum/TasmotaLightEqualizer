@@ -98,5 +98,5 @@ void loop() {
 	StatusLight::setColor(false, false, false); // off
 
 	Serial.println("going to sleep");
-	Power::lightSleep(60e3);
+	Power::lightSleep(60e3); // 10e3 for demo
 }
